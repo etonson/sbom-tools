@@ -1,0 +1,12 @@
+{
+  "projectNames": {
+    "new-gtdmcash": "鄉鎮市出納",
+    "new-gten": "市縣出納支付"
+  },
+  "originNotes": {
+    "com.hynnet": "com.hynnet 為重新發布來源；本機 POM 記載 hynnet, Inc.／dev@hynnet.com，原始專案為 JACOB，發布者國別未能核實。"
+  },
+  "artifactNameChecks": [
+    "fastjson"
+  ]
+}

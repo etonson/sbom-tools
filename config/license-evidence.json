@@ -74,7 +74,11 @@
         "POM 只有 groupId／artifactId／version，沒有授權宣告。"
       ],
       "reviewedBy": "eton.lin",
-      "reviewedAt": "2026-10-19"
+      "reviewedAt": "2026-10-19",
+      "officialSnapshot": {
+        "path": "serializer-2.7.3/official-xalan-2.7.3-official.html",
+        "url": "https://xalan.apache.org/xalan-j/"
+      }
     },
     {
       "purl": "pkg:maven/org.apereo.cas.client/cas-client-core@4.0.4?type=jar",
@@ -100,7 +104,11 @@
         "原文未說明兩段的 AND／OR 關係，此處兩筆照列，不推定可任選。"
       ],
       "reviewedBy": "eton.lin",
-      "reviewedAt": "2026-10-19"
+      "reviewedAt": "2026-10-19",
+      "officialSnapshot": {
+        "path": "cas-client-core-4.0.4/official-cas-client-4.0.4-LICENSE",
+        "url": "https://raw.githubusercontent.com/apereo/java-cas-client/cas-client-4.0.4/LICENSE"
+      }
     },
     {
       "purl": "pkg:maven/com.github.librepdf/openpdf@1.3.43.jaspersoft.2?type=jar",

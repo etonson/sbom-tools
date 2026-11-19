@@ -2,9 +2,11 @@
 
 from .bom import classify, flatten, gpl_without_multiple_licenses, has_exception, has_license, sha256_of
 from .evidence import eos_for, release_for, resolve_license, sha1_of
+from .paths import EVIDENCE_DIRECTORY
 
 
-def evaluate_components(data, evidence, china_origin_groups=(), releases=None, lifecycle=None):
+def evaluate_components(data, evidence, china_origin_groups=(), releases=None, lifecycle=None,
+                        *, evidence_dir=EVIDENCE_DIRECTORY):
     """Use one component identity and the same rules in both reports."""
     components = {}
     for component in flatten(data.get('components') or []):
@@ -26,7 +28,7 @@ def evaluate_components(data, evidence, china_origin_groups=(), releases=None, l
         c.get('group', ''), c.get('name', ''), c.get('version', '')
     ))
     for component in ordered:
-        result = resolve_license(component, evidence)
+        result = resolve_license(component, evidence, evidence_dir=evidence_dir)
         component['license_result'] = result
         component['license_families'] = classify(result['licenses'])
         if result['status'] == 'verified':

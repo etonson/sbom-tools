@@ -1,13 +1,15 @@
 # 各系統元件授權清單
 
-依 `115年11月政府歲計會計資訊管理系統增修暨維護服務案_元件清查_v1.xlsx` 的九欄格式產生，每個系統一個報告：
+要產生新報表，請先看 [快速開始與參數說明](README.md)。
+
+以下是 2026-11-09 的歷史交付紀錄。當時採用原始範本的九欄格式，每個系統一份 Excel。
 
 | 系統 | Excel | 元件數 | SBOM 已記載授權 | 補查授權 | 授權仍缺漏 | GPL／LGPL／AGPL 標記 |
 |---|---|---:|---:|---:|---:|---:|
-| 鄉鎮市出納 | [new-gtdmcash-元件清查.xlsx](new-gtdmcash/new-gtdmcash-元件清查.xlsx) | 177 | 171 | 6 | 0 | 27 |
-| 市縣出納支付 | [new-gten-元件清查.xlsx](new-gten/new-gten-元件清查.xlsx) | 204 | 203 | 1 | 0 | 24 |
+| 鄉鎮市出納 | [new-gtdmcash-元件清查.xlsx](../reports/new-gtdmcash/new-gtdmcash-元件清查.xlsx) | 177 | 171 | 6 | 0 | 27 |
+| 市縣出納支付 | [new-gten-元件清查.xlsx](../reports/new-gten/new-gten-元件清查.xlsx) | 204 | 203 | 1 | 0 | 24 |
 
-以上為本次 2026-11-09 輸入資料的結果。GPL／LGPL／AGPL 標記包括多重授權與例外條款；同一元件僅計一次，不代表違規判定。
+GPL／LGPL／AGPL 標記包括多重授權與例外條款。同一元件僅計一次，供人工覆核。最新操作方式見 [操作說明](README.md)。
 
 ## 重產方式
 
@@ -17,16 +19,16 @@
 .venv/bin/python -B generate_license_excel.py
 ```
 
-輸入為 `resource-bom/*/bom.json`、對應 `bom.xml`、根目錄 `license-evidence.json`、`release-dates.json`、`eos-lifecycle.json`、`china-origin-groups.json` 及 `license-list-evidence/` 的原廠文件。需要 Python 3.11 以上與 openpyxl。程式離線執行，為各組 SBOM 直接建立九欄報告並寫出查證 manifest。
+輸入為 `resource-bom/*/bom.json`、對應 `bom.xml`、`config/` 內的設定及 `reports/license-list-evidence/` 的原廠文件。需要 Python 3.11 以上與 openpyxl。程式離線執行，為各組 SBOM 直接建立九欄報告並寫出查證 manifest。
 
 ## 查證順序及標示
 
 1. 優先使用 SBOM 授權；JSON/XML 的應用識別、元件、版本、授權、雜湊及依賴關係須一致。
-2. 授權缺漏時比對根目錄補充資料的 PURL 與 SHA-256，再核對 `~/.m2/repository/` 對應套件的實際 SHA-256。Excel 將核對過的內部授權文件保存於 `license-list-evidence/artifacts/`，按 Maven 套件路徑與 SHA-256 存放。
+2. 授權缺漏時比對補充資料的 PURL 與 SHA-256，再核對 `~/.m2/repository/` 對應套件的實際 SHA-256。Excel 將核對過的內部授權文件保存於 `license-list-evidence/artifacts/`，按 Maven 套件路徑與 SHA-256 存放。
 3. jaxen、oro、xalan、OpenPDF 以內部授權檔佐證。serializer、CAS Client 未附 LICENSE，另核對原廠文件，保存快照及來源網址。補查的 7 筆涉及 6 個不同套件（OpenPDF 出現於兩個系統）。
 4. 查無結果欄位留白並填淺藍色。GPL／LGPL／AGPL 的授權欄標黃底紅字。Maven `groupId` 與 `china-origin-groups.json` 逐字比對，命中填「是」，元件名稱及產地欄標黃底紅字。
 5. 來源欄使用 mvnrepository 連結，由 group／artifact／version 組成，未逐筆開啟；SBOM 記載的專案網址保留在「授權查證」。
-6. 套件用途使用 SBOM description 原文。發布日期取 Maven Central 的 JAR Last-Modified（UTC），僅 SHA-1 與 SBOM 相符者填入，存於根目錄 `release-dates.json`，早期版本可能晚於實際發布；需更新時先執行 `.venv/bin/python -B fetch_release_dates.py`（需連網）。EOS 僅填原廠公告的日期或維護狀態，規則在根目錄 `eos-lifecycle.json`，原廠快照在 `license-list-evidence/eos/`，狀態以查證日為準；其餘留白，沒有沿用範本推定值。「是否為大陸產品」未發現中國來源者依專案負責人指示填「否」，非逐一查證。
+6. 套件用途使用 SBOM description 原文。發布日期取 Maven Central 的 JAR Last-Modified（UTC），僅 SHA-1 與 SBOM 相符者填入，存於 `config/release-dates.json`，早期版本可能晚於實際發布；需更新時先執行 `.venv/bin/python -B fetch_release_dates.py`（需連網）。EOS 僅填原廠公告的日期或維護狀態，規則在 `config/eos-lifecycle.json`，原廠快照在 `license-list-evidence/eos/`，狀態以查證日為準；其餘留白，沒有沿用範本推定值。「是否為大陸產品」未發現中國來源者依專案負責人指示填「否」，非逐一查證。
 
 本批 SBOM 沒有 fastjson。`com.hynnet:jacob-jdk15` 本機 POM 記載發布者 hynnet, Inc.，但未能核實國別，依指示填「否」並加註說明；授權欄依 LGPL 標黃底紅字。未僅因使用中文或 namespace 就認定產地。
 
@@ -46,7 +48,7 @@
 如需更新另有的 HTML 清查報告，從根目錄執行：
 
 ```sh
-python3 -B analyze_bom.py --input resource-bom --output reports --evidence license-evidence.json
+python3 -B analyze_bom.py --input resource-bom --output reports --evidence config/license-evidence.json
 ```
 
-Excel 與 HTML 使用同一份根目錄補充資料，`reports/license-evidence.json` 已不存在。本次僅重產 Excel。
+Excel 與 HTML 使用 `config/license-evidence.json`。

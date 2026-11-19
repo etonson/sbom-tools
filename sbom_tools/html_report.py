@@ -21,11 +21,12 @@ from .bom import (
     load_bom,
 )
 from .evidence import load_china_origin_groups, load_evidence
+from .paths import EVIDENCE_DIRECTORY, add_report_arguments, evidence_config, single_project
 from .publication import publish
 
 
-def analyze(data, evidence=None, origin_groups=()):
-    components = evaluate_components(data, evidence or {}, origin_groups)
+def analyze(data, evidence=None, origin_groups=(), *, evidence_dir=EVIDENCE_DIRECTORY):
+    components = evaluate_components(data, evidence or {}, origin_groups, evidence_dir=evidence_dir)
     groups = {family: [] for family in FAMILIES}
     missing = []
     mismatched = []
@@ -313,39 +314,45 @@ def render_index(prepared):
     return page('各系統開源授權風險清查', content)
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description="逐專案產生開源授權風險清查 HTML，區分偵測與人工確認事項（無外部套件）")
-    parser.add_argument("--input", type=Path, default=Path("resource-bom"), help="BOM 根目錄")
-    parser.add_argument("--output", type=Path, default=Path("reports"), help="HTML 輸出目錄")
-    parser.add_argument("--evidence", type=Path, default=Path("license-evidence.json"),
-                        help="人工查證的補充授權（檔案不存在則不套用）")
-    args = parser.parse_args()
+    add_report_arguments(parser, input_directory=Path('resource-bom'), output_directory=Path('reports'))
+    args = parser.parse_args(argv)
+    selected = single_project(parser, args)
+    evidence_path = evidence_config(args.evidence)
     try:
-        evidence = load_evidence(args.evidence)
+        evidence = load_evidence(evidence_path)
     except (ValueError, OSError, KeyError, AttributeError) as error:
-        print(f"補充授權讀取失敗：{args.evidence}：{error}", file=sys.stderr)
+        print(f"補充授權讀取失敗：{evidence_path}：{error}", file=sys.stderr)
         return 1
     try:
         origin_groups = load_china_origin_groups()
     except (ValueError, OSError) as error:
         print(f"中國來源名單讀取失敗：{error}", file=sys.stderr)
         return 1
-    # Prefer JSON over XML in each directory, so paired formats never count twice.
-    sources = {}
-    for path in sorted(args.input.rglob("bom.xml")):
-        sources[path.parent] = path
-    for path in sorted(args.input.rglob("bom.json")):
-        sources[path.parent] = path
-    if not sources:
-        parser.error(f"{args.input} 找不到 bom.json 或 bom.xml")
+    if selected:
+        project, directory = selected
+        source = next((path for path in (directory / 'bom.json', directory / 'bom.xml') if path.is_file()), None)
+        if source is None:
+            parser.error(f"{directory} 找不到 bom.json 或 bom.xml")
+        sources = [(project, Path(project), source)]
+    else:
+        # Prefer JSON over XML in each directory, so paired formats never count twice.
+        by_directory = {path.parent: path for path in sorted(args.input.rglob("bom.xml"))}
+        by_directory.update({path.parent: path for path in sorted(args.input.rglob("bom.json"))})
+        if not by_directory:
+            parser.error(f"{args.input} 找不到 bom.json 或 bom.xml")
+        sources = []
+        for directory, source in sorted(by_directory.items()):
+            relative = directory.relative_to(args.input)
+            project = relative.as_posix() if relative.parts else directory.name
+            sources.append((project, relative, source))
     prepared = []
-    for directory, source in sorted(sources.items()):
-        relative = directory.relative_to(args.input)
-        project = relative.as_posix() if relative.parts else directory.name
+    for project, relative, source in sources:
         target = relative / "license-report.html"
         try:
             data = load_bom(source)
-            result = analyze(data, evidence, origin_groups)
+            result = analyze(data, evidence, origin_groups, evidence_dir=args.evidence_dir)
         except (ValueError, OSError, ET.ParseError, TypeError, AttributeError) as error:
             print(f"分析失敗：{source}：{error}", file=sys.stderr)
             return 1

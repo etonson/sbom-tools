@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Rebuild per-system Excel inventories, using SBOM first and verified evidence second."""
+import argparse
 import json
 import math
 import unicodedata
@@ -17,18 +18,28 @@ from openpyxl.utils import get_column_letter
 
 from .assessment import evaluate_components
 from .bom import check_pair, digest, require, sha256_of
-from .evidence import CHINA_ORIGIN_GROUPS, EVIDENCE_DIRECTORY, ROOT, load_china_origin_groups, load_evidence
+from .evidence import load_china_origin_groups, load_evidence
+from .paths import (
+    BOM_DIRECTORY,
+    CHINA_ORIGIN_GROUPS,
+    EOS_LIFECYCLE,
+    EVIDENCE_SUBDIRECTORY,
+    RELEASE_DATES,
+    REPORT_DIRECTORY,
+    REPORT_SETTINGS,
+    add_report_arguments,
+    display_path,
+    evidence_config,
+    single_project,
+)
 from .publication import publish
 
 
-OUT = ROOT / 'reports'
-EVIDENCE_RELATIVE = EVIDENCE_DIRECTORY.relative_to(OUT)
 BLUE = 'DDEBF7'
 YELLOW = 'FFFF00'
 RED = 'FF0000'
 INVENTORY_WIDTHS = (7.5, 35.5, 23, 50, 18.66, 46.51, 65, 18, 35)
 INVENTORY_HEADERS = ('序', '元件名稱', '版號', '套件用途', '發布日期', '來源', '授權方式', '是否為大陸產品', 'EOS')
-SYSTEMS = {'new-gtdmcash': '鄉鎮市出納', 'new-gten': '市縣出納支付'}
 
 
 def labels(entries):
@@ -99,8 +110,8 @@ def format_inventory(sheet, components):
     sheet.print_title_rows = '1:1'
 
 
-def build_workbook(directory, components, lifecycle, checked_at, staging):
-    title = SYSTEMS.get(directory.name, directory.name)[:31]
+def build_workbook(project, components, *, settings, lifecycle, missing_eos, inputs, checked_at):
+    title = settings['projectNames'].get(project, project)[:31]
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = title
@@ -128,7 +139,7 @@ def build_workbook(directory, components, lifecycle, checked_at, staging):
                 record = result['record']
                 notes += '\n' + '\n'.join(record['evidence'])
                 notes += '\n既有查證日期：' + record.get('reviewedAt', '')
-                files = stage_evidence(result['files'], staging)
+                files = result['report_files']
             else:
                 unknown += 1
             component_evidence.append({
@@ -151,12 +162,17 @@ def build_workbook(directory, components, lifecycle, checked_at, staging):
         country = '是' if china else '否'
         country_note = (f'groupId 命中 {CHINA_ORIGIN_GROUPS.name}：{group}' if china else
                         'groupId 未命中中國來源名單，依清查填表規則填「否」；未逐一查證發布者國別。')
-        if group == 'com.hynnet':
-            country_note += (' com.hynnet 為重新發布來源；本機 POM 記載 hynnet, Inc.／dev@hynnet.com，'
-                             '原始專案為 JACOB，發布者國別未能核實。')
+        origin_note = settings['originNotes'].get(group)
+        if origin_note:
+            country_note += ' ' + origin_note
         eos = c['eos']
-        eos_note = (f"{eos['source']}（查證日 {lifecycle['checkedAt']}；快照 license-list-evidence/eos/{eos['snapshot']}）"
-                    if eos else '原廠未公告此元件的生命週期，或未能核對；留白。')
+        if eos and eos['snapshot'] in missing_eos:
+            eos_note = f"缺少 EOS 快照：{eos['snapshot']}；留白。"
+            eos = None
+        elif eos:
+            eos_note = f"{eos['source']}（查證日 {lifecycle['checkedAt']}；快照 {eos['snapshot']}）"
+        else:
+            eos_note = '原廠未公告此元件的生命週期，或未能核對；留白。'
         release = c['release']
         release_note = {'ok': f"Maven Central JAR Last-Modified {release.get('lastModified')}，SHA-1 與 SBOM 相符",
                         'unverified-cache': '既有發布日期缺少已核對的 SHA-1；留白，待更新快取',
@@ -174,7 +190,7 @@ def build_workbook(directory, components, lifecycle, checked_at, staging):
             note = Comment('來源：' + (source or '查無結果') + '\n' + notes.strip(), '授權查證')
             note.width, note.height = 480, 260
             sheet.cell(row, 7).comment = note
-        if china or group == 'com.hynnet':
+        if china or origin_note:
             note = Comment(country_note, '來源查證')
             note.width, note.height = 420, 140
             sheet.cell(row, 8).comment = note
@@ -192,7 +208,12 @@ def build_workbook(directory, components, lifecycle, checked_at, staging):
         'unknownLicenses': unknown,
         'copyleftMarked': sum(bool(c['license_families']) for c in components),
     }
-    add_summary(workbook, directory, title, components, counts, checked_at)
+    add_summary(workbook, project, title, counts, checked_at, inputs, missing_eos)
+    summary = workbook['清查說明']
+    for term in settings['artifactNameChecks']:
+        matched = sum(term.casefold() in c['name'].casefold() for c in components)
+        summary.append([f'元件名稱檢查 {term}', matched])
+    style_table(summary, [60, 120])
     stats = workbook.create_sheet('授權組合統計')
     stats.append(['授權組合（保留來源記載）', '元件數'])
     for label, count in sorted(license_counts.items()):
@@ -201,10 +222,10 @@ def build_workbook(directory, components, lifecycle, checked_at, staging):
     return workbook, counts, component_evidence
 
 
-def add_summary(workbook, directory, title, components, counts, checked_at):
+def add_summary(workbook, project, title, counts, checked_at, inputs, missing_eos):
     summary = workbook.create_sheet('清查說明')
     summary.append(['項目', '內容'])
-    summary.append(['系統', title + ' / ' + directory.name])
+    summary.append(['系統', title + ' / ' + project])
     summary.append(['元件數', counts['components']])
     summary.append(['SBOM 已記載授權', counts['sbomLicenses']])
     summary.append(['同版本 JAR／原廠文件補查', counts['supplemented']])
@@ -213,23 +234,14 @@ def add_summary(workbook, directory, title, components, counts, checked_at):
     summary.append(['標示規則', '查無結果欄位留白並填淺藍色；AGPL／LGPL／GPL 授權欄、命中中國來源名單的元件名稱及產地欄為黃底紅字。'])
     summary.append(['來源欄', 'mvnrepository 連結由 group／artifact／version 組成，未逐筆開啟；SBOM 記載的專案網址見授權查證。'])
     summary.append(['缺漏欄位', '套件用途採 SBOM description（保留原文）；發布日期採 Maven Central JAR 上架時間（UTC），僅 SHA-1 與 SBOM 相符者填入，早期版本可能晚於實際發布；EOS 僅填原廠公告的日期或維護狀態（連結及查證日見授權查證），其餘留白。'])
-    has_fastjson = any('fastjson' in c['name'].lower() for c in components)
-    has_hynnet = any(c.get('group') == 'com.hynnet' for c in components)
-    country_summary = ('有 fastjson 元件。' if has_fastjson else '未發現 fastjson。')
-    country_summary += f'groupId 與 {CHINA_ORIGIN_GROUPS.name} 逐字比對，命中填「是」，其餘填「否」。'
-    if has_hynnet:
-        country_summary += 'com.hynnet 重新發布來源之國別未能核實，同填「否」，詳見授權查證。'
-    summary.append(['國別清查', country_summary])
-    summary.append(['授權關係', '保留原始多重授權及例外，不自行推定 AND／OR。OpenPDF Apache-2.0 僅適用部分檔案，詳見查證資料。'])
+    summary.append(['國別清查', f'groupId 與 {CHINA_ORIGIN_GROUPS.name} 逐字比對，命中填「是」，其餘填「否」。'])
+    summary.append(['授權關係', '保留原始多重授權及例外。適用範圍詳見查證資料。'])
     summary.append(['核對時間', checked_at])
     summary.append(['JSON/XML 核對', '應用識別、元件、版本、授權、雜湊及依賴關係一致；非 CycloneDX schema 驗證。'])
-    summary.append(['中國來源名單', CHINA_ORIGIN_GROUPS.name + '\nSHA-256: ' + digest(CHINA_ORIGIN_GROUPS)])
-    for filename in ('bom.json', 'bom.xml'):
-        path = directory / filename
-        summary.append([filename, str(path.relative_to(ROOT)) + '\nSHA-256: ' + digest(path)])
-    summary.append(['補充資料', 'license-evidence.json\nSHA-256: ' + digest(ROOT / 'license-evidence.json')])
-    style_table(summary, [60, 120])
-
+    if missing_eos:
+        summary.append(['缺少 EOS 快照', '\n'.join(missing_eos.values())])
+    for path, checksum in inputs.items():
+        summary.append([path.name, display_path(path) + '\nSHA-256: ' + checksum])
 
 
 def validate_workbook(dest, components):
@@ -253,79 +265,114 @@ def validate_workbook(dest, components):
                 ET.fromstring(archive.read(name))
 
 
-def stage_evidence(files, staging):
+def stage_evidence(files, staging, output, evidence_dir, input_hashes):
     published = []
     for entry in files:
         if 'artifactPath' in entry:
-            relative = EVIDENCE_RELATIVE / 'artifacts' / entry['artifactPath']
+            relative = EVIDENCE_SUBDIRECTORY / 'artifacts' / entry['artifactPath']
             staged = staging / relative
             staged.parent.mkdir(parents=True, exist_ok=True)
             staged.write_bytes(entry['content'])
+            path = output / relative
             metadata = {'jarEntry': entry['jarEntry']}
         else:
-            relative = EVIDENCE_RELATIVE / entry['snapshot']
+            path = evidence_dir / entry['snapshot']
+            expected = input_hashes.setdefault(path, entry['sha256'])
+            require(expected == entry['sha256'], f'產檔期間快照有變動：{display_path(path)}')
             metadata = {'url': entry['url']}
-        published.append({'path': str(OUT.relative_to(ROOT) / relative),
-                          'sha256': entry['sha256'], **metadata})
+        published.append({'path': display_path(path), 'sha256': entry['sha256'], **metadata})
     return published
 
 
-def main():
-    evidence_path = ROOT / 'license-evidence.json'
-    release_path = ROOT / 'release-dates.json'
-    lifecycle_path = ROOT / 'eos-lifecycle.json'
-    input_paths = (CHINA_ORIGIN_GROUPS, evidence_path, release_path, lifecycle_path)
-    input_hashes = {path.name: digest(path) for path in input_paths}
+def generate_reports(projects, output, evidence_dir, evidence_path, *, release_path, allow_missing_eos):
+    settings = json.loads(REPORT_SETTINGS.read_text(encoding='utf-8'))
+    input_paths = (CHINA_ORIGIN_GROUPS, evidence_path, release_path, EOS_LIFECYCLE, REPORT_SETTINGS)
+    input_hashes = {path: digest(path) for path in input_paths}
     china_origin_groups = load_china_origin_groups()
     records = load_evidence(evidence_path)
     releases = json.loads(release_path.read_text(encoding='utf-8'))['artifacts']
-    lifecycle = json.loads(lifecycle_path.read_text(encoding='utf-8'))
-    for rule in lifecycle['rules']:
-        snapshot = EVIDENCE_DIRECTORY / 'eos' / rule['snapshot']
-        require(snapshot.is_file(), f"EOS 原廠快照不存在：{rule['snapshot']}")
-        input_hashes[str(snapshot.relative_to(ROOT))] = digest(snapshot)
+    lifecycle = json.loads(EOS_LIFECYCLE.read_text(encoding='utf-8'))
+
+    snapshots = {rule['snapshot']: evidence_dir / 'eos' / rule['snapshot']
+                 for rule in lifecycle['rules']}
+    missing_eos = {name: display_path(path) for name, path in sorted(snapshots.items())
+                   if not path.is_file()}
+    if missing_eos and not allow_missing_eos:
+        listing = '\n'.join(missing_eos.values())
+        raise ValueError(f'EOS 原廠快照不存在：\n{listing}\n可用 --evidence-dir 指定快照位置。')
+    for name, snapshot in snapshots.items():
+        if name not in missing_eos:
+            input_hashes[snapshot] = digest(snapshot)
 
     manifest = {
         'checkedAt': datetime.now().astimezone().isoformat(),
-        'inputs': input_hashes,
+        'missingEosSnapshots': list(missing_eos.values()),
         'componentsByProject': {},
         'reports': [],
     }
-    projects = sorted((ROOT / 'resource-bom').glob('*/bom.json'))
-    require(projects, 'resource-bom 找不到 bom.json')
-    manifest_relative = EVIDENCE_RELATIVE / 'manifest.json'
-
-    with TemporaryDirectory(dir=OUT.parent, prefix='.sbom-excel-') as temporary:
+    manifest_relative = EVIDENCE_SUBDIRECTORY / 'manifest.json'
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with TemporaryDirectory(dir=output.parent, prefix='.sbom-excel-') as temporary:
         staging = Path(temporary)
         reports = []
-        for bom in projects:
-            directory = bom.parent
-            for source in (bom, directory / 'bom.xml'):
-                input_hashes[str(source.relative_to(ROOT))] = digest(source)
+        for project, directory in projects:
+            bom_inputs = {directory / name: digest(directory / name) for name in ('bom.json', 'bom.xml')}
+            input_hashes.update(bom_inputs)
             components = evaluate_components(
                 check_pair(directory), records, china_origin_groups, releases, lifecycle,
+                evidence_dir=evidence_dir,
             )
+            for component in components:
+                result = component['license_result']
+                if result['status'] == 'verified':
+                    result['report_files'] = stage_evidence(
+                        result['files'], staging, output, evidence_dir, input_hashes,
+                    )
+            workbook_inputs = {**bom_inputs, CHINA_ORIGIN_GROUPS: input_hashes[CHINA_ORIGIN_GROUPS],
+                               evidence_path: input_hashes[evidence_path]}
             workbook, counts, evidence = build_workbook(
-                directory, components, lifecycle, manifest['checkedAt'], staging,
+                project, components, settings=settings, lifecycle=lifecycle, missing_eos=missing_eos,
+                inputs=workbook_inputs, checked_at=manifest['checkedAt'],
             )
-            relative = Path(directory.name) / f'{directory.name}-元件清查.xlsx'
+            relative = Path(project) / f'{project}-元件清查.xlsx'
             staged = staging / relative
             staged.parent.mkdir(parents=True, exist_ok=True)
             workbook.save(staged)
             validate_workbook(staged, components)
-            manifest['componentsByProject'][directory.name] = evidence
+            manifest['componentsByProject'][project] = evidence
             manifest['reports'].append({
-                'path': str(OUT.relative_to(ROOT) / relative), **counts, 'sha256': digest(staged),
+                'path': display_path(output / relative), **counts, 'sha256': digest(staged),
             })
             reports.append(relative)
 
-        for name, expected in input_hashes.items():
-            require(digest(ROOT / name) == expected, f'產檔期間輸入有變動：{name}')
+        for path, expected in input_hashes.items():
+            require(digest(path) == expected, f'產檔期間輸入有變動：{display_path(path)}')
+        manifest['inputs'] = {display_path(path): expected for path, expected in input_hashes.items()}
         evidence_files = sorted(path.relative_to(staging) for path in
-                                (staging / EVIDENCE_RELATIVE).rglob('*') if path.is_file())
+                                (staging / EVIDENCE_SUBDIRECTORY).rglob('*') if path.is_file())
         staged_manifest = staging / manifest_relative
         staged_manifest.parent.mkdir(parents=True, exist_ok=True)
         staged_manifest.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-        publish(staging, OUT, [*evidence_files, *reports, manifest_relative])
-    for item in manifest['reports']:
+        publish(staging, output, [*evidence_files, *reports, manifest_relative])
+    return manifest['reports']
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description='核對 CycloneDX JSON/XML 並產生 Excel 元件清查')
+    add_report_arguments(parser, input_directory=BOM_DIRECTORY, output_directory=REPORT_DIRECTORY)
+    parser.add_argument('--release-dates', type=Path, default=RELEASE_DATES, help='發布日期快取檔案')
+    parser.add_argument('--allow-missing-eos', action='store_true', help='缺少 EOS 快照時，受影響欄位留白')
+    args = parser.parse_args(argv)
+    selected = single_project(parser, args)
+    projects = [selected] if selected else [
+        (path.parent.name, path.parent) for path in sorted(args.input.glob('*/bom.json'))
+    ]
+    if not projects:
+        parser.error(f'{args.input} 找不到 bom.json')
+    try:
+        reports = generate_reports(projects, args.output, args.evidence_dir, evidence_config(args.evidence),
+                                   release_path=args.release_dates, allow_missing_eos=args.allow_missing_eos)
+    except (OSError, ValueError, KeyError, ET.ParseError) as error:
+        parser.exit(1, f'Excel 產檔失敗：{error}\n')
+    for item in reports:
         print(json.dumps(item, ensure_ascii=False))

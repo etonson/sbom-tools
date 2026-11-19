@@ -3,6 +3,7 @@
 
 A date is kept only when Central's artifact matches the SBOM's SHA-1, so it describes the same JAR.
 """
+import argparse
 import hashlib
 import json
 import urllib.error
@@ -16,7 +17,8 @@ from tempfile import TemporaryDirectory
 from urllib.parse import quote
 
 from .bom import flatten, load_bom, require
-from .evidence import ROOT, maven_artifact, sha1_of
+from .evidence import maven_artifact, sha1_of
+from .paths import BOM_DIRECTORY, RELEASE_DATES
 
 CENTRAL = 'https://repo1.maven.org/maven2'
 HEADERS = {'User-Agent': 'sbom-license-inventory'}
@@ -68,9 +70,19 @@ def lookup(component):
     return purl, result
 
 
-def main():
+def main(argv=None):
+    parser = argparse.ArgumentParser(description='查詢 Maven Central 並重建發布日期快取')
+    sources = parser.add_mutually_exclusive_group()
+    sources.add_argument('--input', type=Path, default=BOM_DIRECTORY, help='批次搜尋 BOM 的根目錄')
+    sources.add_argument('--bom-dir', type=Path, help='直接指定含 bom.json 的單一目錄')
+    parser.add_argument('--output', type=Path, default=RELEASE_DATES, help='發布日期快取檔案')
+    args = parser.parse_args(argv)
+    if args.bom_dir is not None:
+        paths = [args.bom_dir / 'bom.json']
+    else:
+        paths = sorted(args.input.glob('*/bom.json'))
     components = {}
-    for path in sorted((ROOT / 'resource-bom').glob('*/bom.json')):
+    for path in paths:
         for component in flatten(load_bom(path).get('components') or []):
             if component.get('purl'):
                 components[(component['purl'], frozenset(sha1_of(component)))] = component
@@ -82,8 +94,9 @@ def main():
                 artifacts[purl] = result
     output = {'source': CENTRAL, 'field': 'JAR Last-Modified (UTC)',
               'checkedAt': datetime.now(timezone.utc).isoformat(), 'artifacts': dict(sorted(artifacts.items()))}
-    with TemporaryDirectory(dir=ROOT, prefix='.sbom-release-') as temporary:
-        staged = Path(temporary) / 'release-dates.json'
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    with TemporaryDirectory(dir=args.output.parent, prefix='.sbom-release-') as temporary:
+        staged = Path(temporary) / args.output.name
         staged.write_text(json.dumps(output, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-        staged.replace(ROOT / staged.name)
+        staged.replace(args.output)
     print(dict(Counter(item['status'] for item in artifacts.values())))

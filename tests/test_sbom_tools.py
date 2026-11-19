@@ -44,8 +44,8 @@ class AssessmentTests(unittest.TestCase):
                 'sha256': sha256, 'evidence': ['Fixture'],
                 'licenses': [{'expression': 'GPL-2.0-only'}],
             }}
-            with patch('sbom_tools.assessment.resolve_license', wraps=lambda c, r:
-                       resolve_license(c, r, maven_repository=repository)):
+            with patch('sbom_tools.assessment.resolve_license', wraps=lambda c, r, **kwargs:
+                       resolve_license(c, r, maven_repository=repository, **kwargs)):
                 assessed = evaluate_components({'components': [self.component]}, records)[0]
                 html_result = analyze({'components': [self.component]}, records)
                 self.assertEqual(assessed['license_result']['status'], 'verified')
@@ -84,14 +84,14 @@ class AssessmentTests(unittest.TestCase):
             bom = root / 'resource-bom/project/bom.json'
             bom.parent.mkdir(parents=True)
             bom.write_text(json.dumps(data))
-            with (patch('sbom_tools.release_dates.ROOT', root),
-                  patch('sbom_tools.release_dates.fetch', side_effect=lambda url, method='GET': (
+            output = root / 'config/release-dates.json'
+            with (patch('sbom_tools.release_dates.fetch', side_effect=lambda url, method='GET': (
                       checksum.encode() if url.endswith('.sha1') else b'different artifact',
                       {'Last-Modified': 'Mon, 10 Feb 2025 12:00:00 GMT'},
                   )),
                   patch('builtins.print')):
-                refresh_release_dates()
-            entry = json.loads((root / 'release-dates.json').read_text())['artifacts'][self.component['purl']]
+                refresh_release_dates(['--bom-dir', str(bom.parent), '--output', str(output)])
+            entry = json.loads(output.read_text())['artifacts'][self.component['purl']]
             self.assertEqual(entry['sbomSha1'], checksum)
             self.assertEqual(entry['date'], '2025-02-10')
 

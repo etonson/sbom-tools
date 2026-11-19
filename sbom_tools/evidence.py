@@ -8,20 +8,9 @@ from pathlib import Path
 from urllib.parse import parse_qs
 
 from .bom import has_license, sha256_of
+from .paths import CHINA_ORIGIN_GROUPS, EVIDENCE_DIRECTORY
 
 
-ROOT = Path(__file__).resolve().parents[1]
-EVIDENCE_DIRECTORY = ROOT / 'reports/license-list-evidence'
-CHINA_ORIGIN_GROUPS = ROOT / 'china-origin-groups.json'
-OFFICIAL_LICENSES = {
-    ('xalan', 'serializer', '2.7.3'): (
-        'official-xalan-2.7.3-official.html', 'https://xalan.apache.org/xalan-j/',
-    ),
-    ('org.apereo.cas.client', 'cas-client-core', '4.0.4'): (
-        'official-cas-client-4.0.4-LICENSE',
-        'https://raw.githubusercontent.com/apereo/java-cas-client/cas-client-4.0.4/LICENSE',
-    ),
-}
 LICENSE_FILENAME = re.compile(r'license|licence|copying|notice|^MANIFEST\.MF$', re.I)
 LICENSE_FILE = re.compile(r'licen[cs]e', re.I)
 
@@ -118,16 +107,17 @@ def resolve_license(component, records, evidence_dir=EVIDENCE_DIRECTORY, maven_r
         except (OSError, zipfile.BadZipFile, RuntimeError, NotImplementedError):
             return finish('invalid-artifact', '無法讀取套件內的授權文件；授權留白')
 
-    coordinate = tuple(component[key] for key in ('group', 'name', 'version'))
-    if coordinate in OFFICIAL_LICENSES:
-        filename, url = OFFICIAL_LICENSES[coordinate]
-        snapshot = evidence_dir / f'{coordinate[1]}-{coordinate[2]}' / filename
-        if not snapshot.is_file():
+    official = record.get('officialSnapshot')
+    if official:
+        relative = Path(official['path'])
+        snapshot = evidence_dir / relative
+        if (relative.is_absolute() or '..' in relative.parts
+                or not snapshot.resolve().is_relative_to(evidence_dir.resolve()) or not snapshot.is_file()):
             return finish('missing-snapshot', '原廠授權快照不存在；授權留白')
         files.append({
-            'snapshot': str(snapshot.relative_to(evidence_dir)),
+            'snapshot': str(relative),
             'sha256': hashlib.sha256(snapshot.read_bytes()).hexdigest(),
-            'url': url,
+            'url': official['url'],
         })
     elif not any(LICENSE_FILE.search(Path(file['jarEntry']).name) for file in files):
         return finish('missing-license-file', '套件未附 LICENSE；授權留白')
