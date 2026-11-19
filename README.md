@@ -10,9 +10,11 @@
 .venv/bin/python -B generate_license_excel.py
 ```
 
-先讀 SBOM 授權，缺漏時使用 `license-evidence.json` 並核對本機同版本 Maven JAR 雜湊與內部授權檔。JAR 未附授權時使用已保存的原廠文件。缺漏欄位留白標淺藍，GPL／LGPL／AGPL 與已確認中國來源元件標黃底紅字。
+先讀 SBOM 授權，缺漏時使用 `license-evidence.json` 並核對本機同版本 Maven JAR 雜湊與內部授權檔。JAR 未附授權時使用已保存的原廠文件。缺漏欄位留白標淺藍。GPL／LGPL／AGPL 的授權欄，以及命中中國來源名單的元件名稱和產地欄，使用黃底紅字。
 
-產檔需要 Python 3 與 openpyxl，並使用本機的補充資料、範本與查證快照。查證方式及歷史報告見 [reports/README.md](reports/README.md)。
+產檔需要 Python 3 與 openpyxl，並使用本機的補充資料與查證快照。程式直接建立九欄表頭。查證方式及歷史報告見 [reports/README.md](reports/README.md)。
+
+在 [china-origin-groups.json](china-origin-groups.json) 增刪 Maven `groupId` 來維護中國來源名單。程式逐字比對，命中填「是」，未命中依清查規則填「否」。填「否」僅表示未命中名單。
 
 ## 產生 HTML
 

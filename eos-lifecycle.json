@@ -1,0 +1,147 @@
+{
+  "description": "僅收錄原廠公告的生命週期；未收錄者報告 EOS 留白。狀態會隨時間變動，以 checkedAt 為準。",
+  "checkedAt": "2026-11-09",
+  "rules": [
+    {
+      "groups": [
+        "org.springframework"
+      ],
+      "versionLine": "7.0",
+      "eos": "OSS 支援至 2027-07-31；商業支援至 2028-07-31（Spring Framework 7.0.x）",
+      "source": "https://api.spring.io/projects/spring-framework/generations",
+      "snapshot": "spring-framework.json"
+    },
+    {
+      "groups": [
+        "org.springframework.boot"
+      ],
+      "versionLine": "4.1",
+      "eos": "OSS 支援至 2027-07-31；商業支援至 2028-07-31（Spring Boot 4.1.x）",
+      "source": "https://api.spring.io/projects/spring-boot/generations",
+      "snapshot": "spring-boot.json"
+    },
+    {
+      "groups": [
+        "org.springframework.ws"
+      ],
+      "versionLine": "4.1",
+      "eos": "OSS 支援已於 2026-06-30 結束；商業支援至 2032-06-30（Spring Web Services 4.1.x）",
+      "source": "https://api.spring.io/projects/spring-ws/generations",
+      "snapshot": "spring-ws.json"
+    },
+    {
+      "groups": [
+        "org.springframework.ws"
+      ],
+      "versionLine": "5.0",
+      "eos": "OSS 支援至 2027-07-31；商業支援至 2028-07-31（Spring Web Services 5.0.x）",
+      "source": "https://api.spring.io/projects/spring-ws/generations",
+      "snapshot": "spring-ws.json"
+    },
+    {
+      "groups": [
+        "io.micrometer"
+      ],
+      "versionLine": "1.16",
+      "eos": "OSS 支援至 2026-12-31；商業支援至 2027-12-31（Micrometer 1.16.x）",
+      "source": "https://api.spring.io/projects/micrometer/generations",
+      "snapshot": "micrometer.json"
+    },
+    {
+      "groups": [
+        "io.micrometer"
+      ],
+      "versionLine": "1.17",
+      "eos": "OSS 支援至 2027-07-31；商業支援至 2028-07-31（Micrometer 1.17.x）",
+      "source": "https://api.spring.io/projects/micrometer/generations",
+      "snapshot": "micrometer.json"
+    },
+    {
+      "groups": [
+        "com.fasterxml.jackson.core",
+        "com.fasterxml.jackson.dataformat",
+        "com.fasterxml.jackson.datatype",
+        "com.fasterxml.jackson.module"
+      ],
+      "versionLine": "2.21",
+      "eos": "原廠未公告日期；LTS 分支，維護中（Jackson 2.21）",
+      "source": "https://github.com/FasterXML/jackson/wiki/Jackson-Releases",
+      "snapshot": "jackson.md"
+    },
+    {
+      "groups": [
+        "com.fasterxml.jackson.core",
+        "com.fasterxml.jackson.dataformat",
+        "com.fasterxml.jackson.datatype",
+        "com.fasterxml.jackson.module"
+      ],
+      "versionLine": "2.22",
+      "eos": "已結束維護：分支於 2026-11 關閉（Jackson 2.22）",
+      "source": "https://github.com/FasterXML/jackson/wiki/Jackson-Releases",
+      "snapshot": "jackson.md"
+    },
+    {
+      "groups": [
+        "tools.jackson.core"
+      ],
+      "versionLine": "3.1",
+      "eos": "原廠未公告日期；LTS 分支，維護中（Jackson 3.1）",
+      "source": "https://github.com/FasterXML/jackson/wiki/Jackson-Releases",
+      "snapshot": "jackson.md"
+    },
+    {
+      "groups": [
+        "org.hibernate.orm"
+      ],
+      "versionLine": "7.4",
+      "eos": "原廠未公告日期；最新穩定系列，維護中（Hibernate ORM 7.4）",
+      "source": "https://hibernate.org/orm/releases/",
+      "snapshot": "hibernate-orm-releases.html"
+    },
+    {
+      "groups": [
+        "org.hibernate.validator"
+      ],
+      "versionLine": "9.1",
+      "eos": "原廠未公告日期；最新穩定系列，維護中（Hibernate Validator 9.1）",
+      "source": "https://hibernate.org/validator/releases/",
+      "snapshot": "hibernate-validator-releases.html"
+    },
+    {
+      "groups": [
+        "org.apache.httpcomponents"
+      ],
+      "versionLine": "4.5",
+      "eos": "原廠未公告日期；僅修重大缺陷與安全問題（HttpClient 4.5.x）",
+      "source": "https://hc.apache.org/status.html",
+      "snapshot": "httpcomponents-status.html"
+    },
+    {
+      "groups": [
+        "org.apache.httpcomponents"
+      ],
+      "versionLine": "4.4",
+      "eos": "原廠未公告日期；NIO 已 EOL，Classic 僅修重大缺陷與安全問題（HttpCore 4.4.x）",
+      "source": "https://hc.apache.org/status.html",
+      "snapshot": "httpcomponents-status.html"
+    },
+    {
+      "groups": [
+        "org.apache.httpcomponents.client5"
+      ],
+      "versionLine": "5.6",
+      "eos": "原廠未公告日期；穩定版，維護中（HttpClient 5.6.x）",
+      "source": "https://hc.apache.org/status.html",
+      "snapshot": "httpcomponents-status.html"
+    },
+    {
+      "groups": [
+        "org.apache.httpcomponents.core5"
+      ],
+      "versionLine": "5.4",
+      "eos": "原廠未公告日期；現行穩定版（HttpCore 5.4.x）",
+      "source": "https://hc.apache.org/status.html",
+      "snapshot": "httpcomponents-status.html"
+    }
+  ]
+}

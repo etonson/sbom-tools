@@ -1,0 +1,139 @@
+{
+  "description": "BOM 未記載授權的元件，人工查證後的補充授權。只在 BOM 無授權欄位、且 purl 與 SHA-256 皆相符時套用；報告另行標示，不改寫 BOM。",
+  "components": [
+    {
+      "purl": "pkg:maven/jaxen/jaxen@1.1.6?type=jar",
+      "sha256": "5ac9c74bbb3964b34a886ba6b1b6c0b0dc3ebeebc1dc4a44942a76634490b3eb",
+      "licenses": [
+        {
+          "license": {
+            "id": "BSD-3-Clause",
+            "url": "https://spdx.org/licenses/BSD-3-Clause.html"
+          }
+        }
+      ],
+      "evidence": [
+        "JAR 內 META-INF/LICENSE.txt：Copyright 2003-2006 The Werken Company，三條款 BSD 授權全文（保留著作權聲明、二進位散布須附聲明、不得以專案名義背書）。",
+        "POM 的 <license> 只有已停站的 http://jaxen.codehaus.org/license.html，沒有授權名稱，CycloneDX 因此無法對應。"
+      ],
+      "reviewedBy": "eton.lin",
+      "reviewedAt": "2026-10-19"
+    },
+    {
+      "purl": "pkg:maven/oro/oro@2.0.8?type=jar",
+      "sha256": "e00ccdad5df7eb43fdee44232ef64602bf63807c2d133a7be83ba09fd49af26e",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-1.1",
+            "url": "https://spdx.org/licenses/Apache-1.1.html"
+          }
+        }
+      ],
+      "evidence": [
+        "JAR 內 META-INF/LICENSE：The Apache Software License, Version 1.1，Copyright (c) 2000-2002 The Apache Software Foundation。",
+        "POM 只有 groupId／artifactId／version，沒有授權宣告。",
+        "注意：Apache-1.1 有致謝條款（end-user documentation 須註明 ASF 開發），與 Apache-2.0 不同。"
+      ],
+      "reviewedBy": "eton.lin",
+      "reviewedAt": "2026-10-19"
+    },
+    {
+      "purl": "pkg:maven/xalan/xalan@2.7.3?type=jar",
+      "sha256": "febd48bb133a96c447282213951a6b74ea7fb45c0d896121296c014316bda6b0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0",
+            "url": "https://www.apache.org/licenses/LICENSE-2.0"
+          }
+        }
+      ],
+      "evidence": [
+        "JAR 內 META-INF/LICENSE.txt：Apache License, Version 2.0 全文；META-INF/NOTICE.txt 註明內含 Apache Commons BCEL。",
+        "官方網站 https://xalan.apache.org/xalan-j/ ：「The Apache Software License Version 2.0 applies to all releases of Xalan-Java starting with Version 2.6.0.」",
+        "POM 只有 groupId／artifactId／version，沒有授權宣告。"
+      ],
+      "reviewedBy": "eton.lin",
+      "reviewedAt": "2026-10-19"
+    },
+    {
+      "purl": "pkg:maven/xalan/serializer@2.7.3?type=jar",
+      "sha256": "5f6804bacdfdb3ccc52d2538536fab8986696d61559b081054a420c653806667",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0",
+            "url": "https://www.apache.org/licenses/LICENSE-2.0"
+          }
+        }
+      ],
+      "evidence": [
+        "JAR 內未附授權檔；META-INF/MANIFEST.MF 記載 Implementation-Vendor: Apache Software Foundation、Implementation-Version: 2.7.3。",
+        "官方網站 https://xalan.apache.org/xalan-j/ ：「The Xalan-Java implementation is in xalan.jar and serializer.jar.」與 xalan 2.7.3 屬同一發行版，適用同一授權（Apache-2.0，2.6.0 起）。",
+        "POM 只有 groupId／artifactId／version，沒有授權宣告。"
+      ],
+      "reviewedBy": "eton.lin",
+      "reviewedAt": "2026-10-19"
+    },
+    {
+      "purl": "pkg:maven/org.apereo.cas.client/cas-client-core@4.0.4?type=jar",
+      "sha256": "b814c4d5b5714b374c8e159aa5451d22f509e0d249a01829c9571d2914343ad4",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0",
+            "url": "https://www.apache.org/licenses/LICENSE-2.0"
+          }
+        },
+        {
+          "license": {
+            "id": "BSD-3-Clause",
+            "name": "JA-SIG, Inc. 2007 BSD 授權（原廠 LICENSE 檔後段）",
+            "url": "https://spdx.org/licenses/BSD-3-Clause.html"
+          }
+        }
+      ],
+      "evidence": [
+        "JAR 內未附授權檔；POM 與 parent cas-client 4.0.4 均無 <licenses>，parent POM 檔頭聲明以 Apache License 2.0 授權。",
+        "原廠 repo tag cas-client-4.0.4 的 LICENSE（https://github.com/apereo/java-cas-client/blob/cas-client-4.0.4/LICENSE）：前段為 Apereo 的 Apache License 2.0 聲明，後段為「License for Use」Copyright (c) 2007 JA-SIG, Inc. 三條款 BSD 全文。",
+        "原文未說明兩段的 AND／OR 關係，此處兩筆照列，不推定可任選。"
+      ],
+      "reviewedBy": "eton.lin",
+      "reviewedAt": "2026-10-19"
+    },
+    {
+      "purl": "pkg:maven/com.github.librepdf/openpdf@1.3.43.jaspersoft.2?type=jar",
+      "sha256": "c8f2b3262b8128029f94fe9a789486bd252eddc06d475198c90583d94e7b7909",
+      "licenses": [
+        {
+          "license": {
+            "name": "GNU Lesser General Public License (LGPL), Version 2.1",
+            "url": "https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html"
+          }
+        },
+        {
+          "license": {
+            "id": "MPL-2.0",
+            "url": "https://www.mozilla.org/en-US/MPL/2.0/"
+          }
+        },
+        {
+          "license": {
+            "id": "Apache-2.0",
+            "name": "僅適用含 Apache 專案程式碼的部分檔案（依 META-INF/LICENSES.md）",
+            "url": "https://www.apache.org/licenses/LICENSE-2.0"
+          }
+        }
+      ],
+      "evidence": [
+        "本次補查直接核對同版本 JAR，不由其他版本推定。",
+        "本機 Maven JAR 的 SHA-256 與兩份 SBOM 一致；META-INF/LICENSES.md 列明 LGPL 2.1 與 MPL 2.0，並附 LGPL-2.1.md、MPL-2.0.txt。",
+        "META-INF/LICENSES.md 說明 Apache-2.0 僅適用部分檔案；另附 APACHE-LICENSE-2.0.txt 與 misc_licenses.txt，後者記載 SimpleXMLParser 來源致謝要求。",
+        "未推定 AND／OR、LGPL only／or-later；保留各授權及適用範圍。"
+      ],
+      "reviewedBy": "Codex（本機同版本 JAR 核對）",
+      "reviewedAt": "2026-11-09"
+    }
+  ]
+}
